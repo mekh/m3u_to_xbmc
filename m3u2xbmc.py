@@ -103,10 +103,12 @@ def read_m3u(m3u):
 	return(chlist)
 	m3ufile.close()
 
+
 def writejson(filename, data):
 	output = open(filename, 'w')
 	json.dump(data, output, indent=8, ensure_ascii=False)
 	output.close()
+
 
 def writehts(chlist):
 	iptvpath = 'iptvservices'
