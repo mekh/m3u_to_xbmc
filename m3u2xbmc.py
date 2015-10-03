@@ -7,6 +7,7 @@ import linecache
 from channels import channel_list
 
 IFACE = 'eth1'
+CHANNELS_PY = 'channels.py'
 SUNLINE_M3U = 'iptv.m3u'
 XMLTV_FILE = 'xmltv.xml'
 IPTVSIMPLE_M3U = 'output.m3u'
@@ -152,11 +153,27 @@ def writehts(chlist):
                     }
             writejson(os.path.join(xmltvpath, channel['id']), jsepg)
 
+def generate(m3u):
+    m3ufile = open(m3u)
+    chpy = open(CHANNELS_PY, 'w')
+    chlist = dict()
+    chcount = 0
+
+    chpy.write('#!/usr/bin/python\n# -*- coding: utf-8 -*-\n\n\nchannel_list = {\n')
+
+    for line in m3ufile:
+        if re.match('#EXTINF', line):
+            chcount +=1
+            chname = re.compile('.*, (.*)').match(line).group(1)
+            chpy.write("'" + chname + "':" + '\t'*4 + '[' + "'" + chname + "', '', '" + str(chcount) + "']," + '\n')
+    chpy.write('}')
+    chpy.close()
 
 def main():
     chlist = read_m3u(SUNLINE_M3U)
     write_m3u(chlist)
     writehts(chlist)
+    #generate(SUNLINE_M3U)
     print "\n\n Done!"
 
 if __name__ == '__main__':
