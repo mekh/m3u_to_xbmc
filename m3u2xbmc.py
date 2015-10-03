@@ -10,7 +10,7 @@ IFACE = 'eth1'
 SUNLINE_M3U = 'iptv.m3u'
 XMLTV_FILE = 'xmltv.xml'
 IPTVSIMPLE_M3U = 'output.m3u'
-BASE_ICONS_PATH = 'file:///home/xbmc/Install/Logo'
+BASE_ICONS_PATH = 'file:///home/user/channel/logo'
 M3U_EXT_LINE = '#EXTINF:-1 tvg-id="TVG_ID" hts-number="HTS_NUMBER" tvg-shift=-1 tvg-logo="CHANNEL_ICON", CHANNEL_NAME'
 
 chlist = dict()
