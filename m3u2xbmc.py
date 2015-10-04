@@ -165,7 +165,7 @@ def generate(m3u):
         if re.match('#EXTINF', line):
             chcount +=1
             chname = re.compile('.*, (.*)').match(line).group(1)
-            chpy.write("'" + chname + "':" + '\t'*4 + '[' + "'" + chname + "', '', '" + str(chcount) + "']," + '\n')
+            chpy.write("'%s': %30s', '', '%d'],\n" % (chname, "['"+chname, chcount))
     chpy.write('}')
     chpy.close()
 
