@@ -2,62 +2,65 @@
 # -*- coding: utf-8 -*-
 import re
 import os
+import sys
 import json
+import argparse
 import linecache
-from channels import channel_list
 
 IFACE = 'eth1'
-CHANNELS_PY = 'channels.py'
-SUNLINE_M3U = 'iptv.m3u'
+CHANNELS_PY = 'channels.lst'
+SOURCE_M3U = 'iptv.m3u'
 XMLTV_FILE = 'xmltv.xml'
 IPTVSIMPLE_M3U = 'output.m3u'
-BASE_ICONS_PATH = 'file:///home/user/channel/logo'
+BASE_ICONS_PATH = 'file:///home/user/channels/logo'
 M3U_EXT_LINE = '#EXTINF:-1 tvg-id="TVG_ID" hts-number="HTS_NUMBER" tvg-shift=-1 tvg-logo="CHANNEL_ICON", CHANNEL_NAME'
 
 chlist = dict()
 
 
-def get_channel_data(chname):
-    
-    xmlfile = open(XMLTV_FILE)
+def get_channel_data(chname, xmltv, channel_list):
+
+    xmlfile = open(xmltv)
     channel_id = ''
     channel_icon = ''
     line_counter = 0
 
-    if channel_list.get(chname)[1]: #Is there an icon name in the channels.py list?
+    if channel_list.get(chname)[1]:  # Is there an icon name in the channels.py list?
         channel_icon = os.path.join(BASE_ICONS_PATH, channel_list.get(chname)[1])
 
     xml_chname = channel_list.get(chname)[0]
-                
-    xml_chname = re.sub('\+', '\+', xml_chname) #Backslacshing some simbols in order to find the 
-    xml_chname = re.sub('\(', '\(', xml_chname) #channel names that includes '+', '(' or ')' in
-    xml_chname = re.sub('\)', '\)', xml_chname) #the xmlvtv.xml file.
+
+    xml_chname = re.sub('\+', '\+', xml_chname)  # Backslacshing some symbols in order to find the
+    xml_chname = re.sub('\(', '\(', xml_chname)  # channel names that includes '+', '(' or ')' in
+    xml_chname = re.sub('\)', '\)', xml_chname)  # the xmlvtv.xml file.
     xml_chname = ">" + xml_chname + "<"
 
     for line in xmlfile:
         line_counter += 1
 
-        if re.match('<programme', line): #Interrupt the search once the channel list is ended.
+        if "<programme" in line: #Interrupt the search once the channel list is ended.
             break
 
         if re.search(xml_chname, line): #Searching for channel name in xmltv.xml file.
-            channel_id = linecache.getline(XMLTV_FILE, line_counter - 1) #The string with the channel ID is a one line above the current. 
+            channel_id = linecache.getline(xmltv, line_counter - 1) #The string with the channel ID is a one line above the current.
             channel_id = re.compile('.*"(.*)".*').match(channel_id).group(1) #Get the channel ID.
 
             if not channel_icon: #If there was no icon found in the channels.py before, trying to find it in the xmltv.xml
-                channel_icon = linecache.getline(XMLTV_FILE, line_counter + 1) #A string with the icon is the one line below the current.
+                channel_icon = linecache.getline(xmltv, line_counter + 1) #A string with the icon is the one line below the current.
                 if re.match("<icon src", channel_icon): #Is there the icon-field?
                     channel_icon = re.split('"', channel_icon)[-2] #Get the icon url.
+                else:
+                    channel_icon = ''
 
             xmlfile.close()
-            return(channel_id, channel_icon)
+            return channel_id, channel_icon
 
     xmlfile.close()
-    return(channel_id, channel_icon)
+    return channel_id, channel_icon
 
 
-def write_m3u(chlist):
-    iptvsimple_m3u = open(IPTVSIMPLE_M3U, 'w')
+def write_m3u(chlist, output):
+    iptvsimple_m3u = open(output, 'w')
     iptvsimple_m3u.write('#EXTM3U' + '\n\n')
 
     for channel in chlist.values():
@@ -71,27 +74,35 @@ def write_m3u(chlist):
     iptvsimple_m3u.close()
 
 
-def read_m3u(m3u):
+def read_m3u(m3u, xmltv, channels):
     m3ufile = open(m3u)
     chcnt = 0
+    channel_list = dict()
+    chdata = list()
+    chfile = open(channels)
+    
+    for line in chfile:
+        chname = re.compile('(.*):.*').match(line).group(1) #Get channel name
+        chdata = re.compile('.*:\s+(.*)$').match(line).group(1).split(',') #Get channel data
+        channel_list.update([(chname, chdata)])
 
     for line in m3ufile:
-        if re.search('V.I.P', line): #Skip the VIP channels
+        if 'V.I.P' in line: #Skip VIP channels
             m3ufile.close()
             break
 
         if re.match('#EXTINF', line):
-            chname = re.compile('.*, (.*)').match(line).group(1) #Get the channel name
+            chname = re.compile('.*, (.*)').match(line).group(1) #Get channel name
 
             if channel_list.get(chname):
-                channel_data = get_channel_data(chname)
+                channel_data = get_channel_data(chname, xmltv, channel_list)
                 chid = channel_data[0]
                 chicon = channel_data[1]
                 chnumber = channel_list.get(chname)[2]
                 chname = channel_list.get(chname)[0]
                 newchannel = False
             else:
-                print 'The "' + chname + '" channel is not in list. Please add it first to channels.py list.'
+                print 'The "' + chname + '" channel is not in list. Please add it first to channels.lst.'
                 newchannel = True
 
         if re.match('udp', line) and newchannel == False:
@@ -101,13 +112,14 @@ def read_m3u(m3u):
             chaddress = line
 
             chlist[chname] = {'num': chcnt, 'name': chname, 'number': chnumber, 'address': chaddr, 'port': chport, 'id': chid, 'icon': chicon}
-    return(chlist)
+    return chlist
     m3ufile.close()
 
 def writejson(filename, data):
     output = open(filename, 'w')
     json.dump(data, output, indent=8, ensure_ascii=False)
     output.close()
+
 
 def writehts(chlist):
     iptvpath = 'iptvservices'
@@ -121,7 +133,7 @@ def writehts(chlist):
         os.makedirs(xmltvpath)
 
     for channel in chlist.values():
-        
+
         #iptvservices/iptv_?
         jssvc = {'pmt': 0,
                 'pcr': 0,
@@ -144,7 +156,7 @@ def writehts(chlist):
             jschan['icon'] = channel['icon']
         writejson(os.path.join(chpath, str(channel['num'])), jschan)
 
-        #epggrab/xmltv/channels/?   
+        #epggrab/xmltv/channels/?
         if channel['id']:
             jsepg = {
                     'name': channel['name'],
@@ -153,28 +165,50 @@ def writehts(chlist):
                     }
             writejson(os.path.join(xmltvpath, channel['id']), jsepg)
 
-def generate(m3u):
-    m3ufile = open(m3u)
-    chpy = open(CHANNELS_PY, 'w')
-    chlist = dict()
-    chcount = 0
 
-    chpy.write('#!/usr/bin/python\n# -*- coding: utf-8 -*-\n\n\nchannel_list = {\n')
+def generate(m3u, output):
+    m3ufile = open(m3u)
+    chpy = open(output, 'w')
+    chcount = 0
 
     for line in m3ufile:
         if re.match('#EXTINF', line):
             chcount +=1
             chname = re.compile('.*, (.*)').match(line).group(1)
-            chpy.write("'%s': %30s', '', '%d'],\n" % (chname, "['"+chname, chcount))
-    chpy.write('}')
+            chpy.write("%s: %30s,,%d\n" % (chname, chname, chcount))
+
+    print ('\nFile %s succesfuly generated!\nTo generate the IPTV Simple M3U list, run:\n\
+            python m3u2xbmc.py -c %s') % (str(output), str(output))
     chpy.close()
+    m3ufile.close()
+
+
+def opt_parser():
+    parser = argparse.ArgumentParser(
+        prog='m3u2xbmc', 
+        description='Converts the m3u-iptv list to the IPTV Simple file format and generates the xbmc-tvheadend files/folders structure',
+        epilog='(c) Alexandr Mekh, 2015')
+    parser.add_argument('-s', '--source', default=SOURCE_M3U, metavar='', help='Source IPTV M3U file name')
+    parser.add_argument('-o', '--output', default=IPTVSIMPLE_M3U, metavar='', help='Output IPTV Simple M3U file name')
+    parser.add_argument('-c', '--channels', default=CHANNELS_PY, metavar='', help='Ouput channel list file')
+    parser.add_argument('-x', '--xmltv', default=XMLTV_FILE, metavar='', help='Source xmlvtv file')
+    parser.add_argument('-g', '--generate', action='store_true', default=False, help='Generate new channels.py file using the source M3U')
+
+    return parser
+
 
 def main():
-    chlist = read_m3u(SUNLINE_M3U)
-    write_m3u(chlist)
-    writehts(chlist)
-    #generate(SUNLINE_M3U)
-    print "\n\n Done!"
+    parser = opt_parser()
+    args = parser.parse_args(sys.argv[1:])
+
+    if args.generate:
+        generate(args.source, args.channels)
+    elif not args.generate:
+        chlist = read_m3u(args.source, args.xmltv, args.channels)
+        write_m3u(chlist, args.output)
+        writehts(chlist)
+    else:
+        parser.print_help()
 
 if __name__ == '__main__':
     main()
