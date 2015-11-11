@@ -13,30 +13,29 @@ Each time I had to change the Tvheadend settings manualy. I've finally had enoug
 Usage
 -----
 
-Run ``m3u2xbmc.py [options]`` or ``m3u2xbmc.py -h`` for help.
-
-To generate new channels.lst run: 
+Use ``m3u2xbmc.py [options]`` or ``m3u2xbmc.py -h`` for help.
+To generate new channels.lst use:
     
     m3u2xbmc.py -g [-c list_name] [-s source_name] 
 
-The default names are:
+The default option names are:
     
     -s iptv.m3u
     -o output.m3u
     -c channels.lst
     -x xmltv.xml
 
-To generate IPTVSimple m3u and tvheadend file/folders, run:
+To generate IPTVSimple m3u and tvheadend file/folders, use:
     
     m3u2xbmc [-s m3u_sourse_name] [-o m3u_iptvsimple_name] [-c channels_lst_name] [-x xmltv_name]
 
 xmltv.xml can be downloaded here: http://www.teleguide.info/download/new3/xmltv.xml.gz (ungzip it first!)
 
-To import the configuration to Tvheadend you have to stop the tvheadend service, delete its configuration and remove cached epg database.
+To import the configuration to the Tvheadend you have to stop the tvheadend service, delete its configuration and remove cached epg database.
 Example:
 
     $wget -O - http://www.teleguide.info/download/new3/xmltv.xml.gz |gunzip -c > xmltv.xml
-    $cp iptv.m3u m3u2xbmc.py channels.py xmltv.xml ~/.hts/tvheadend
+    $cp iptv.m3u m3u2xbmc.py channels.lst xmltv.xml ~/.hts/tvheadend
     $sudo service tvheadend stop
     $cd ~/.hts/tvheadend
     $rm epgdb.v2
@@ -60,7 +59,7 @@ Channel name and address are read from the M3U file (iptv.m3u):
 File channels.lst contains the ISP channel name ("Channel 1"), the correspondent xmltv.xml channel name ("Channel 1 (France)") and the additional
 information about channel icon and its position in Tvheadend channel list.
 
-    Provider's channel name : Corresponding xmltv name,Local icon (if exists),Channel number in the hts list
+    'Provider's channel name : 'Corresponding xmltv name','Local icon (if exists)','Channel number in the hts list'
 
 At first you may generate the channels.lst file by running the next command:
     
