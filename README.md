@@ -39,7 +39,7 @@ Example:
     $sudo service tvheadend stop
     $cd ~/.hts/tvheadend
     $rm epgdb.v2
-    $rm iptvservices/* channels/* epggrab/xmltv/channels/*
+    $rm iptvservices/* channels/* epggrab/xmltv/channels/* imagecache/meta/*
     $python m3u2xbmc.py
     $sudo service tvheadend start
 
